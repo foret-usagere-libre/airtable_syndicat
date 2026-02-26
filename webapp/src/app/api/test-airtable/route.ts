@@ -26,8 +26,8 @@ type AirtableRecord = {
 
 export async function GET() {
   try {
-    const token = process.env.AIRTABLE_API_TOKEN;
-    const baseId = process.env.AIRTABLE_BASE_ID;
+    const token = process.env.AIRTABLE_API_TOKEN?.trim();
+    const baseId = process.env.AIRTABLE_BASE_ID?.trim();
     if (!token || !baseId) {
       return NextResponse.json({ error: "Missing env vars" }, { status: 500 });
     }
@@ -54,6 +54,11 @@ export async function GET() {
             message: payload?.error?.type || "Airtable error",
             statusCode: response.status,
             details: payload,
+          },
+          diagnostics: {
+            tokenFormat: token.startsWith("pat") ? "pat" : "unknown",
+            tokenLength: token.length,
+            baseIdPrefix: baseId.slice(0, 3),
           },
         },
         { status: 500 }
