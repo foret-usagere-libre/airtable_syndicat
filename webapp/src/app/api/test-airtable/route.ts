@@ -19,6 +19,11 @@ function formatError(error: unknown) {
   return { message: String(error) };
 }
 
+type AirtableRecord = {
+  id: string;
+  fields: Record<string, unknown>;
+};
+
 export async function GET() {
   try {
     const token = process.env.AIRTABLE_API_TOKEN;
@@ -55,7 +60,9 @@ export async function GET() {
       );
     }
 
-    const records = Array.isArray(payload?.records) ? payload.records : [];
+    const records: AirtableRecord[] = Array.isArray(payload?.records)
+      ? (payload.records as AirtableRecord[])
+      : [];
 
     return NextResponse.json({
       ok: true,
