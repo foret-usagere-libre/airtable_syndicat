@@ -44,6 +44,8 @@ export type CadastreDetail = CadastreListItem & {
 const TABLES = {
   parcellesMeres: "🗺 Parcelles Mères",
   cadastre: "📝 Cadastre",
+  proprietaires: "🌳 Propriétaires",
+  personnes: "👨‍👩‍👧‍👦 Personnes",
 } as const;
 
 const AIRTABLE_RECORD_ID_REGEX = /^rec[a-zA-Z0-9]{14}$/;
@@ -175,6 +177,43 @@ function firstNonEmpty(fields: Record<string, unknown>, keys: string[]): string 
     }
   }
   return "";
+}
+
+function toSearchString(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map((item) => toSearchString(item)).filter(Boolean).join(" ");
+  }
+  return str(value);
+}
+
+function extractSearchText(fields: Record<string, unknown>, keys: string[]): string {
+  return keys.map((key) => toSearchString(fields[key])).filter(Boolean).join(" ");
+}
+
+async function resolveLinkedRecords(
+  tableName: string,
+  ids: string[],
+  fields: string[]
+): Promise<Map<string, Record<string, unknown>>> {
+  const uniqueIds = [...new Set(ids.filter((id) => isValidRecordId(id)))];
+  const mapping = new Map<string, Record<string, unknown>>();
+  if (uniqueIds.length === 0) return mapping;
+
+  for (let index = 0; index < uniqueIds.length; index += 30) {
+    const chunk = uniqueIds.slice(index, index + 30);
+    const formula = `OR(${chunk.map((id) => `RECORD_ID()='${id}'`).join(",")})`;
+    const records = await airtableList(tableName, {
+      pageSize: 100,
+      filterByFormula: formula,
+      fields,
+    });
+
+    for (const record of records) {
+      mapping.set(record.id, record.fields);
+    }
+  }
+
+  return mapping;
 }
 
 export async function listParcellesMeres(): Promise<ParcelleMere[]> {
@@ -314,16 +353,125 @@ export async function listCadastresForHome(): Promise<CadastreSearchItem[]> {
     ],
   });
 
+  const parcelleLinkField =
+    "Nom Parcelle Mère (from ID Parcelle Mère) (from Cadastre - Parcelles Mères)";
+  const ownerLinkField = "Nom Propriétaire";
+
+  const parcelleIds = records.flatMap((record) => toStringArray(record.fields[parcelleLinkField]));
+  const ownerIds = records.flatMap((record) => toStringArray(record.fields[ownerLinkField]));
+
+  const [parcelleNameMap, ownerNameMap] = await Promise.all([
+    resolveLinkedRecords(TABLES.parcellesMeres, parcelleIds, [
+      "Nom Parcelle Mère",
+      "Propriétaires",
+      "N° Lot",
+    ]),
+    resolveLinkedRecords(TABLES.proprietaires, ownerIds, [
+      "Nom Propriétaire",
+      "Personnes",
+      "e-mail",
+      "téléphone 1",
+      "téléphone 2",
+      "Adresse",
+      "Ville",
+      "CP",
+    ]),
+  ]);
+
+  const personIds = [...ownerNameMap.values()].flatMap((ownerFields) =>
+    toStringArray(ownerFields["Personnes"])
+  );
+  const personMap = await resolveLinkedRecords(TABLES.personnes, personIds, [
+    "Nom",
+    "Prénom",
+    "Raison Sociale",
+    "e-mail",
+    "Téléphone 1",
+    "Téléphone 2",
+    "Adresse",
+    "Ville",
+  ]);
+
   return records
     .map((record) => {
       const section = str(record.fields["Section"]);
       const numero = str(record.fields["Num"]);
       const part = str(record.fields["Part"]);
       const code = `${section || "?"} ${numero || ""}${part ? ` ${part}` : ""}`.trim();
-      const lieuDit = firstNonEmpty(record.fields, [
-        "Nom Parcelle Mère (from ID Parcelle Mère) (from Cadastre - Parcelles Mères)",
-      ]);
-      const proprietaire = firstNonEmpty(record.fields, ["🌳 Propriétaires", "Nom Propriétaire"]);
+
+      const linkedParcelleNames = toStringArray(record.fields[parcelleLinkField])
+        .map((id) => str(parcelleNameMap.get(id)?.["Nom Parcelle Mère"]))
+        .filter((value): value is string => Boolean(value));
+      const lieuDit =
+        linkedParcelleNames.join(" · ") ||
+        firstNonEmpty(record.fields, [parcelleLinkField]);
+
+      const linkedOwnerNames = toStringArray(record.fields[ownerLinkField])
+        .map((id) => str(ownerNameMap.get(id)?.["Nom Propriétaire"]))
+        .filter((value): value is string => Boolean(value));
+      const proprietaire =
+        linkedOwnerNames.join(" · ") ||
+        firstNonEmpty(record.fields, ["🌳 Propriétaires", ownerLinkField]);
+
+      const ownerLinkedIds = toStringArray(record.fields[ownerLinkField]);
+      const ownerDetailsText = ownerLinkedIds
+        .map((id) =>
+          extractSearchText(ownerNameMap.get(id) ?? {}, [
+            "Nom Propriétaire",
+            "e-mail",
+            "téléphone 1",
+            "téléphone 2",
+            "Adresse",
+            "Ville",
+            "CP",
+          ])
+        )
+        .filter(Boolean)
+        .join(" ");
+
+      const contactLinkedFromOwners = ownerLinkedIds
+        .flatMap((id) => toStringArray(ownerNameMap.get(id)?.["Personnes"]))
+        .map((personId) =>
+          extractSearchText(personMap.get(personId) ?? {}, [
+            "Nom",
+            "Prénom",
+            "Raison Sociale",
+            "e-mail",
+            "Téléphone 1",
+            "Téléphone 2",
+            "Adresse",
+            "Ville",
+          ])
+        )
+        .filter(Boolean)
+        .join(" ");
+
+      const parcelleDetailsText = toStringArray(record.fields[parcelleLinkField])
+        .map((id) =>
+          extractSearchText(parcelleNameMap.get(id) ?? {}, [
+            "Nom Parcelle Mère",
+            "Propriétaires",
+            "N° Lot",
+          ])
+        )
+        .filter(Boolean)
+        .join(" ");
+
+      const inlineContactsText = toStringArray(record.fields["Personnes"]).join(" ");
+
+      const searchText = normalizeSearchText(
+        [
+          code,
+          lieuDit,
+          proprietaire,
+          inlineContactsText,
+          ownerDetailsText,
+          contactLinkedFromOwners,
+          parcelleDetailsText,
+          JSON.stringify(record.fields),
+        ].join(" ")
+      );
+
       return {
         id: record.id,
         section,
@@ -333,7 +481,7 @@ export async function listCadastresForHome(): Promise<CadastreSearchItem[]> {
         code,
         lieuDit,
         proprietaire,
-        searchText: normalizeSearchText(JSON.stringify(record.fields)),
+        searchText,
       };
     })
     .sort((a, b) => a.code.localeCompare(b.code, "fr", { sensitivity: "base" }));
