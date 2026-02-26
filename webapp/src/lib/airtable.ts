@@ -50,7 +50,15 @@ const TABLES = {
   cadastre: "📝 Cadastre",
   proprietaires: "🌳 Propriétaires",
   personnes: "👨‍👩‍👧‍👦 Personnes",
+  users: "👷🏻‍♂️ Users",
 } as const;
+
+export type MagicUser = {
+  id: string;
+  email: string;
+  nom: string;
+  status: string;
+};
 
 const AIRTABLE_RECORD_ID_REGEX = /^rec[a-zA-Z0-9]{14}$/;
 const CADASTRE_SEARCH_FIELDS = [
@@ -163,6 +171,18 @@ function isValidRecordId(id: string): boolean {
 
 function escapeAirtableFormulaString(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\r?\n/g, " ");
+}
+
+function normalizeStatus(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
+}
+
+export function isUserActive(status: string): boolean {
+  return normalizeStatus(status) === "active";
 }
 
 function normalizeSearchText(value: string): string {
@@ -595,4 +615,26 @@ export async function listCadastresForHome(): Promise<CadastreSearchItem[]> {
 
 export function normalizeQuery(value: string): string {
   return normalizeSearchText(value);
+}
+
+export async function getUserByMagicToken(token: string): Promise<MagicUser | null> {
+  const cleanToken = token.trim();
+  if (!cleanToken) return null;
+
+  const escapedToken = escapeAirtableFormulaString(cleanToken);
+  const formula = `OR({MagicLink}="${escapedToken}", FIND("${escapedToken}", {MagicLink} & "") > 0)`;
+  const records = await airtableList(TABLES.users, {
+    maxRecords: 1,
+    filterByFormula: formula,
+    fields: ["Nom", "e-mail", "Status"],
+  });
+  const record = records[0];
+  if (!record) return null;
+
+  return {
+    id: record.id,
+    email: str(record.fields["e-mail"]),
+    nom: str(record.fields["Nom"]),
+    status: str(record.fields["Status"]),
+  };
 }
