@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import Airtable from "airtable";
 
 function formatError(error: unknown) {
   if (error instanceof Error) {
@@ -28,12 +27,35 @@ export async function GET() {
       return NextResponse.json({ error: "Missing env vars" }, { status: 500 });
     }
 
-    Airtable.configure({ apiKey: token });
-    const base = Airtable.base(baseId);
+    const tableName = "🗺 Parcelles Mères";
+    const url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}?maxRecords=5`;
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    });
 
-    const records = await base("🗺 Parcelles Mères")
-      .select({ maxRecords: 5 })
-      .firstPage();
+    const payload = await response.json();
+    if (!response.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          envCheck: {
+            hasAirtableToken: Boolean(process.env.AIRTABLE_API_TOKEN),
+            hasBaseId: Boolean(process.env.AIRTABLE_BASE_ID),
+          },
+          error: {
+            message: payload?.error?.type || "Airtable error",
+            statusCode: response.status,
+            details: payload,
+          },
+        },
+        { status: 500 }
+      );
+    }
+
+    const records = Array.isArray(payload?.records) ? payload.records : [];
 
     return NextResponse.json({
       ok: true,
