@@ -39,6 +39,20 @@ const TABLES = {
   cadastre: "📝 Cadastre",
 } as const;
 
+const AIRTABLE_RECORD_ID_REGEX = /^rec[a-zA-Z0-9]{14}$/;
+const CADASTRE_SEARCH_FIELDS = [
+  "Section",
+  "Num",
+  "Part",
+  "Notes",
+  "Personnes",
+  "🌳 Propriétaires",
+  "Ville",
+  "e-mail",
+  "téléphone",
+  "téléphone 2",
+] as const;
+
 function getConfig() {
   const token = process.env.AIRTABLE_API_TOKEN?.trim();
   const baseId = process.env.AIRTABLE_BASE_ID?.trim();
@@ -130,11 +144,12 @@ function mapParcelleMere(record: AirtableRecord): ParcelleMere {
   };
 }
 
-function normalize(text: string) {
-  return text
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase();
+function isValidRecordId(id: string): boolean {
+  return AIRTABLE_RECORD_ID_REGEX.test(id);
+}
+
+function escapeAirtableFormulaString(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\r?\n/g, " ");
 }
 
 export async function listParcellesMeres(): Promise<ParcelleMere[]> {
@@ -149,6 +164,8 @@ export async function listParcellesMeres(): Promise<ParcelleMere[]> {
 }
 
 export async function getParcelleMereById(id: string): Promise<ParcelleMere | null> {
+  if (!isValidRecordId(id)) return null;
+
   const records = await airtableList(TABLES.parcellesMeres, {
     maxRecords: 1,
     filterByFormula: `RECORD_ID()='${id}'`,
@@ -158,12 +175,13 @@ export async function getParcelleMereById(id: string): Promise<ParcelleMere | nu
 }
 
 export async function listCadastresByIds(ids: string[]): Promise<CadastreListItem[]> {
-  if (ids.length === 0) return [];
+  const validIds = ids.filter((id) => isValidRecordId(id));
+  if (validIds.length === 0) return [];
 
   const formulas: string[] = [];
   const chunks: string[][] = [];
-  for (let index = 0; index < ids.length; index += 30) {
-    chunks.push(ids.slice(index, index + 30));
+  for (let index = 0; index < validIds.length; index += 30) {
+    chunks.push(validIds.slice(index, index + 30));
   }
 
   for (const chunk of chunks) {
@@ -190,6 +208,8 @@ export async function listCadastresByIds(ids: string[]): Promise<CadastreListIte
 }
 
 export async function getCadastreById(id: string): Promise<CadastreDetail | null> {
+  if (!isValidRecordId(id)) return null;
+
   const records = await airtableList(TABLES.cadastre, {
     maxRecords: 1,
     filterByFormula: `RECORD_ID()='${id}'`,
@@ -226,13 +246,21 @@ export async function getCadastreById(id: string): Promise<CadastreDetail | null
 }
 
 export async function searchCadastres(query: string): Promise<CadastreListItem[]> {
-  const q = normalize(query.trim());
+  const q = query.trim().toLowerCase();
   if (q.length < 2) return [];
 
-  const records = await airtableList(TABLES.cadastre, { pageSize: 100 });
+  const escaped = escapeAirtableFormulaString(q);
+  const filterByFormula = `OR(${CADASTRE_SEARCH_FIELDS.map(
+    (field) => `FIND("${escaped}", LOWER({${field}} & "")) > 0`
+  ).join(",")})`;
+
+  const records = await airtableList(TABLES.cadastre, {
+    pageSize: 100,
+    filterByFormula,
+    fields: ["Section", "Num", "Part", "Surface"],
+  });
 
   return records
-    .filter((record) => normalize(JSON.stringify(record.fields)).includes(q))
     .map(mapCadastre)
     .sort(
       (a, b) =>

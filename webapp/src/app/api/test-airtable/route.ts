@@ -25,11 +25,15 @@ type AirtableRecord = {
 };
 
 export async function GET() {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   try {
     const token = process.env.AIRTABLE_API_TOKEN?.trim();
     const baseId = process.env.AIRTABLE_BASE_ID?.trim();
     if (!token || !baseId) {
-      return NextResponse.json({ error: "Missing env vars" }, { status: 500 });
+      return NextResponse.json({ ok: false, error: "Missing env vars" }, { status: 500 });
     }
 
     const tableName = "🗺 Parcelles Mères";
@@ -46,19 +50,9 @@ export async function GET() {
       return NextResponse.json(
         {
           ok: false,
-          envCheck: {
-            hasAirtableToken: Boolean(process.env.AIRTABLE_API_TOKEN),
-            hasBaseId: Boolean(process.env.AIRTABLE_BASE_ID),
-          },
           error: {
             message: payload?.error?.type || "Airtable error",
             statusCode: response.status,
-            details: payload,
-          },
-          diagnostics: {
-            tokenFormat: token.startsWith("pat") ? "pat" : "unknown",
-            tokenLength: token.length,
-            baseIdPrefix: baseId.slice(0, 3),
           },
         },
         { status: 500 }
@@ -75,13 +69,12 @@ export async function GET() {
       items: records.map((r) => ({ id: r.id, fields: r.fields })),
     });
   } catch (error) {
-    return NextResponse.json({
-      ok: false,
-      envCheck: {
-        hasAirtableToken: Boolean(process.env.AIRTABLE_API_TOKEN),
-        hasBaseId: Boolean(process.env.AIRTABLE_BASE_ID),
+    return NextResponse.json(
+      {
+        ok: false,
+        error: formatError(error),
       },
-      error: formatError(error),
-    }, { status: 500 });
+      { status: 500 }
+    );
   }
 }
