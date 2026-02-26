@@ -25,6 +25,13 @@ export type CadastreListItem = {
   surface?: number;
 };
 
+export type CadastreSearchItem = CadastreListItem & {
+  code: string;
+  lieuDit: string;
+  proprietaire: string;
+  searchText: string;
+};
+
 export type CadastreDetail = CadastreListItem & {
   proprietaires: string[];
   personnes: string[];
@@ -152,6 +159,24 @@ function escapeAirtableFormulaString(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\r?\n/g, " ");
 }
 
+function normalizeSearchText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
+}
+
+function firstNonEmpty(fields: Record<string, unknown>, keys: string[]): string {
+  for (const key of keys) {
+    const values = toStringArray(fields[key]);
+    if (values.length > 0) {
+      return values.join(" · ");
+    }
+  }
+  return "";
+}
+
 export async function listParcellesMeres(): Promise<ParcelleMere[]> {
   const records = await airtableList(TABLES.parcellesMeres, {
     pageSize: 100,
@@ -267,4 +292,53 @@ export async function searchCadastres(query: string): Promise<CadastreListItem[]
         a.section.localeCompare(b.section, "fr", { sensitivity: "base" }) ||
         a.numero.localeCompare(b.numero, "fr", { sensitivity: "base" })
     );
+}
+
+export async function listCadastresForHome(): Promise<CadastreSearchItem[]> {
+  const records = await airtableList(TABLES.cadastre, {
+    pageSize: 100,
+    fields: [
+      "Section",
+      "Num",
+      "Part",
+      "Surface",
+      "Nom Parcelle Mère (from ID Parcelle Mère) (from Cadastre - Parcelles Mères)",
+      "🌳 Propriétaires",
+      "Nom Propriétaire",
+      "Notes",
+      "Personnes",
+      "Ville",
+      "e-mail",
+      "téléphone",
+      "téléphone 2",
+    ],
+  });
+
+  return records
+    .map((record) => {
+      const section = str(record.fields["Section"]);
+      const numero = str(record.fields["Num"]);
+      const part = str(record.fields["Part"]);
+      const code = `${section || "?"} ${numero || ""}${part ? ` ${part}` : ""}`.trim();
+      const lieuDit = firstNonEmpty(record.fields, [
+        "Nom Parcelle Mère (from ID Parcelle Mère) (from Cadastre - Parcelles Mères)",
+      ]);
+      const proprietaire = firstNonEmpty(record.fields, ["🌳 Propriétaires", "Nom Propriétaire"]);
+      return {
+        id: record.id,
+        section,
+        numero,
+        part,
+        surface: num(record.fields["Surface"]),
+        code,
+        lieuDit,
+        proprietaire,
+        searchText: normalizeSearchText(JSON.stringify(record.fields)),
+      };
+    })
+    .sort((a, b) => a.code.localeCompare(b.code, "fr", { sensitivity: "base" }));
+}
+
+export function normalizeQuery(value: string): string {
+  return normalizeSearchText(value);
 }

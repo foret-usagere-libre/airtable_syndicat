@@ -24,9 +24,9 @@ export default async function ParcelleMerePage({ params }: PageProps) {
   const cadastres = await listCadastresByIds(parcelle.cadastreIds);
 
   return (
-    <main className="mx-auto min-h-screen max-w-xl bg-slate-50 p-4">
-      <Link href="/" className="mb-4 inline-block text-sm text-slate-700 underline">
-        ← Retour à l&apos;accueil
+    <main className="mx-auto min-h-screen max-w-3xl bg-slate-50 p-4">
+      <Link href="/parcelles-meres" className="mb-4 inline-block text-sm text-slate-700 underline">
+        ← Retour parcelles mères
       </Link>
       <h1 className="text-2xl font-semibold">{parcelle.nom}</h1>
       <p className="mb-4 text-sm text-slate-600">
@@ -39,7 +39,7 @@ export default async function ParcelleMerePage({ params }: PageProps) {
           <li key={cadastre.id}>
             <Link
               href={`/cadastres/${cadastre.id}`}
-              className="block rounded-lg border border-slate-200 bg-white p-3"
+              className="block rounded-lg border border-slate-200 bg-[#efefef] p-3"
             >
               <p className="font-medium">
                 {cadastre.section || "?"} {cadastre.numero || ""}

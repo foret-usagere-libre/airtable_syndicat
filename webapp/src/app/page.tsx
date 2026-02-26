@@ -1,51 +1,26 @@
 import Link from "next/link";
-import { listParcellesMeres } from "@/lib/airtable";
+import CadastreSearchPanel from "@/components/cadastre-search-panel";
+import { listCadastresForHome } from "@/lib/airtable";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const parcelles = await listParcellesMeres();
+  const cadastres = await listCadastresForHome();
 
   return (
-    <main className="mx-auto min-h-screen max-w-xl bg-slate-50 p-4">
-      <h1 className="mb-2 text-2xl font-semibold">Parcelles mères</h1>
-      <p className="mb-4 text-sm text-slate-600">
-        Choisissez une parcelle mère ou lancez une recherche globale.
-      </p>
-
-      <form action="/recherche" className="mb-4 flex gap-2">
-        <input
-          type="text"
-          name="q"
-          placeholder="Recherche libre dans la base"
-          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-        />
-        <button
-          type="submit"
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white"
-        >
-          Rechercher
-        </button>
-      </form>
-
-      <ul className="space-y-2">
-        {parcelles.map((parcelle) => (
-          <li key={parcelle.id}>
-            <Link
-              href={`/parcelles-meres/${parcelle.id}`}
-              className="block rounded-lg border border-slate-200 bg-white p-3"
-            >
-              <p className="font-medium">{parcelle.nom || "Sans nom"}</p>
-              <p className="text-sm text-slate-600">
-                {parcelle.surfaceHa ? `${parcelle.surfaceHa} ha` : "Surface inconnue"}
-              </p>
-              <p className="text-xs text-slate-500">
-                {parcelle.cadastreIds.length} section(s) cadastrale(s)
-              </p>
-            </Link>
-          </li>
-        ))}
-      </ul>
+    <main className="min-h-screen bg-slate-100">
+      <div className="h-[320px] w-full bg-[radial-gradient(circle_at_25%_20%,#9cab6f_0,#6f7751_25%,#303330_65%,#1d1f1d_100%)]" />
+      <div className="mx-auto -mt-10 max-w-4xl px-4 pb-6">
+        <CadastreSearchPanel initialItems={cadastres} />
+        <div className="mt-4 text-center">
+          <Link
+            href="/parcelles-meres"
+            className="inline-block rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700"
+          >
+            Voir la navigation par parcelles mères
+          </Link>
+        </div>
+      </div>
     </main>
   );
 }
