@@ -6,6 +6,7 @@ import type { CadastreSearchItem } from "@/lib/airtable";
 
 type Props = {
   initialItems: CadastreSearchItem[];
+  userEmail?: string;
 };
 
 function normalizeQuery(value: string): string {
@@ -16,7 +17,7 @@ function normalizeQuery(value: string): string {
     .trim();
 }
 
-export default function CadastreSearchPanel({ initialItems }: Props) {
+export default function CadastreSearchPanel({ initialItems, userEmail }: Props) {
   const [query, setQuery] = useState("");
 
   const normalizedQuery = normalizeQuery(query);
@@ -31,6 +32,9 @@ export default function CadastreSearchPanel({ initialItems }: Props) {
       <p className="mx-auto mt-3 max-w-2xl text-center text-base text-slate-100/95">
         Consultation du rôle des propriétaires de la forêt usagère
       </p>
+      {userEmail ? (
+        <p className="mt-1 text-center text-sm text-slate-200/95">Pour {userEmail}</p>
+      ) : null}
 
       <div className="mt-5 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-black shadow-sm">
         <span aria-hidden className="text-base text-slate-500">

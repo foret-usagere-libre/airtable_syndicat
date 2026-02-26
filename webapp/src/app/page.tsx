@@ -1,13 +1,24 @@
 import Link from "next/link";
 import Image from "next/image";
+import { cookies } from "next/headers";
 import CadastreSearchPanel from "@/components/cadastre-search-panel";
 import { listCadastresForHome } from "@/lib/airtable";
+import { getSessionConfig, verifySessionToken } from "@/lib/session";
 import hero from "./hero.jpeg";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const cadastres = await listCadastresForHome();
+  const cookieStore = await cookies();
+  let sessionEmail: string | undefined;
+  try {
+    const sessionToken = cookieStore.get(getSessionConfig().cookieName)?.value;
+    const session = sessionToken ? await verifySessionToken(sessionToken) : null;
+    sessionEmail = session?.email;
+  } catch {
+    sessionEmail = undefined;
+  }
 
   return (
     <main className="min-h-screen bg-[#e8ecf1]">
@@ -16,7 +27,7 @@ export default async function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black/55" />
       </div>
       <div className="mx-auto -mt-16 max-w-5xl px-3 pb-8 sm:px-4">
-        <CadastreSearchPanel initialItems={cadastres} />
+        <CadastreSearchPanel initialItems={cadastres} userEmail={sessionEmail} />
         <div className="mt-5 text-center">
           <Link
             href="/parcelles-meres"
