@@ -26,27 +26,27 @@ export default function CadastreSearchPanel({ initialItems }: Props) {
   }, [initialItems, normalizedQuery]);
 
   return (
-    <section className="rounded-2xl bg-[#5d5d5d] px-4 py-6 text-white shadow-sm">
-      <h1 className="text-center text-3xl font-semibold tracking-wide">Cadastre</h1>
-      <p className="mt-2 text-center text-sm text-slate-200">
+    <section className="rounded-[22px] border border-white/20 bg-[#5a5a5a]/96 px-4 py-6 text-white shadow-xl backdrop-blur-[1px]">
+      <h1 className="text-center text-4xl font-semibold leading-none tracking-tight">Cadastre</h1>
+      <p className="mx-auto mt-3 max-w-2xl text-center text-base text-slate-100/95">
         Consultation du rôle des propriétaires de la forêt usagère
       </p>
 
-      <div className="mt-5 flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-black">
-        <span aria-hidden className="text-sm text-slate-500">
+      <div className="mt-5 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-black shadow-sm">
+        <span aria-hidden className="text-base text-slate-500">
           🔎
         </span>
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Recherche"
-          className="w-full border-0 bg-transparent text-sm outline-none"
+          className="w-full border-0 bg-transparent text-[1.1rem] outline-none placeholder:text-slate-500"
         />
         {query ? (
           <button
             type="button"
             onClick={() => setQuery("")}
-            className="text-sm text-slate-500"
+            className="text-base text-slate-500"
             aria-label="Effacer la recherche"
           >
             ✕
@@ -54,21 +54,27 @@ export default function CadastreSearchPanel({ initialItems }: Props) {
         ) : null}
       </div>
 
-      <p className="mt-3 text-xs text-slate-200">{filtered.length} résultat(s)</p>
+      <p className="mt-4 text-sm text-slate-100/90">{filtered.length} résultat(s)</p>
 
       <ul className="mt-3 space-y-3">
         {filtered.map((item) => (
           <li key={item.id}>
             <Link
               href={`/cadastres/${item.id}`}
-              className="block rounded-xl bg-[#efefef] p-4 text-slate-900 shadow-sm"
+              className="block rounded-2xl border border-slate-300/60 bg-[#f3f4f6] p-4 text-slate-900 shadow-sm transition hover:bg-white active:scale-[0.995]"
             >
-              <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-[120px_120px_1fr]">
-                <p className="font-semibold">{item.code}</p>
-                <p>{item.surface ? `${Math.round(item.surface)} m²` : "—"}</p>
-                <p className="font-medium">{item.lieuDit || "Lieu-dit non renseigné"}</p>
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-[2rem] leading-none font-semibold tracking-tight">{item.code}</p>
+                <p className="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700">
+                  {item.surface ? `${Math.round(item.surface)} m²` : "—"}
+                </p>
               </div>
-              <p className="mt-2 text-sm text-slate-700">{item.proprietaire || "Propriétaire non renseigné"}</p>
+              <p className="mt-3 text-lg font-medium text-slate-900">
+                {item.lieuDit || "Parcelle mère non renseignée"}
+              </p>
+              <p className="mt-1 text-[1.05rem] text-slate-700">
+                {item.proprietaire || "Propriétaire non renseigné"}
+              </p>
             </Link>
           </li>
         ))}
