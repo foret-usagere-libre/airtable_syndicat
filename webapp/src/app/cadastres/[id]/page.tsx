@@ -34,17 +34,11 @@ export default async function CadastrePage({ params }: PageProps) {
 
         <section className="rounded-xl bg-white p-5 shadow-sm">
           <h1 className="text-3xl font-semibold">
-            {cadastre.proprietaires[0] || `Section ${cadastre.section || "?"} ${cadastre.numero || ""}`}
+            {cadastre.proprietaires[0] || "Propriétaire non renseigné"}
           </h1>
 
-          <p className="mt-3 text-sm text-slate-600">
-            Section {cadastre.section || "?"} {cadastre.numero || ""}
-            {cadastre.part ? ` — Part ${cadastre.part}` : ""}
-            {cadastre.surface ? ` — ${cadastre.surface} m²` : ""}
-          </p>
-
-          {cadastre.personnes.length > 0 ? (
-            <p className="mt-2 text-sm text-slate-700">{cadastre.personnes.join(", ")}</p>
+          {cadastre.contactNoms.length > 0 ? (
+            <p className="mt-3 text-sm text-slate-700">{cadastre.contactNoms.join(", ")}</p>
           ) : null}
 
           <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -76,6 +70,20 @@ export default async function CadastrePage({ params }: PageProps) {
             Si e-mail ou téléphone n&apos;apparaît pas, il n&apos;est pas encore renseigné.
           </p>
         </section>
+
+        {cadastre.contactAdresse ? (
+          <section className="mt-4 rounded-xl bg-white p-4 shadow-sm">
+            <h2 className="mb-1 font-medium">Adresse postale du contact</h2>
+            <p className="text-sm text-slate-700">{cadastre.contactAdresse}</p>
+          </section>
+        ) : null}
+
+        {cadastre.parcelleMere ? (
+          <section className="mt-4 rounded-xl bg-white p-4 shadow-sm">
+            <h2 className="mb-1 font-medium">Parcelle mère</h2>
+            <p className="text-sm text-slate-700">{cadastre.parcelleMere}</p>
+          </section>
+        ) : null}
 
         {cadastre.villes.length > 0 ? (
           <section className="mt-4 rounded-xl bg-white p-4 shadow-sm">

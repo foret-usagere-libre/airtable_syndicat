@@ -34,11 +34,15 @@ export type CadastreSearchItem = CadastreListItem & {
 
 export type CadastreDetail = CadastreListItem & {
   proprietaires: string[];
-  personnes: string[];
+  parcelleMere: string;
   notes: string;
   villes: string[];
   emails: string[];
   telephones: string[];
+  contactNoms: string[];
+  contactEmails: string[];
+  contactTelephones: string[];
+  contactAdresse: string;
 };
 
 const TABLES = {
@@ -190,6 +194,13 @@ function extractSearchText(fields: Record<string, unknown>, keys: string[]): str
   return keys.map((key) => toSearchString(fields[key])).filter(Boolean).join(" ");
 }
 
+function ownerContactIds(ownerFields: Record<string, unknown> | undefined): string[] {
+  if (!ownerFields) return [];
+  const mandataires = toStringArray(ownerFields["Mandataire"]).filter((id) => isValidRecordId(id));
+  if (mandataires.length > 0) return mandataires;
+  return toStringArray(ownerFields["Personnes"]).filter((id) => isValidRecordId(id));
+}
+
 async function resolveLinkedRecords(
   tableName: string,
   ids: string[],
@@ -274,6 +285,10 @@ export async function listCadastresByIds(ids: string[]): Promise<CadastreListIte
 export async function getCadastreById(id: string): Promise<CadastreDetail | null> {
   if (!isValidRecordId(id)) return null;
 
+  const parcelleLinkField =
+    "Nom Parcelle Mère (from ID Parcelle Mère) (from Cadastre - Parcelles Mères)";
+  const ownerLinkField = "Nom Propriétaire";
+
   const records = await airtableList(TABLES.cadastre, {
     maxRecords: 1,
     filterByFormula: `RECORD_ID()='${id}'`,
@@ -283,7 +298,8 @@ export async function getCadastreById(id: string): Promise<CadastreDetail | null
       "Part",
       "Surface",
       "Notes",
-      "Personnes",
+      parcelleLinkField,
+      ownerLinkField,
       "🌳 Propriétaires",
       "Ville",
       "e-mail",
@@ -295,17 +311,108 @@ export async function getCadastreById(id: string): Promise<CadastreDetail | null
   const record = records[0];
   if (!record) return null;
 
+  const parcelleIds = toStringArray(record.fields[parcelleLinkField]);
+  const primaryParcelleId = parcelleIds.find((parcelleId) => isValidRecordId(parcelleId));
+  const ownerIds = toStringArray(record.fields[ownerLinkField]);
+  const primaryOwnerId = ownerIds.find((ownerId) => isValidRecordId(ownerId));
+
+  const [parcelleMap, ownerMap] = await Promise.all([
+    resolveLinkedRecords(
+      TABLES.parcellesMeres,
+      primaryParcelleId ? [primaryParcelleId] : [],
+      ["Nom Parcelle Mère"]
+    ),
+    resolveLinkedRecords(TABLES.proprietaires, primaryOwnerId ? [primaryOwnerId] : [], [
+      "Nom Propriétaire",
+      "Mandataire",
+      "Personnes",
+      "e-mail",
+      "téléphone 1",
+      "téléphone 2",
+      "Adresse",
+      "CP",
+      "Ville",
+    ]),
+  ]);
+
+  const primaryPersonId = primaryOwnerId ? ownerContactIds(ownerMap.get(primaryOwnerId))[0] : undefined;
+  const personIds = primaryPersonId ? [primaryPersonId] : [];
+  const personMap = await resolveLinkedRecords(TABLES.personnes, personIds, [
+    "Nom",
+    "Prénom",
+    "Raison Sociale",
+    "e-mail",
+    "Téléphone 1",
+    "Téléphone 2",
+    "Adresse",
+    "CodePostal",
+    "Ville",
+  ]);
+
+  const parcelleMere = primaryParcelleId
+    ? str(parcelleMap.get(primaryParcelleId)?.["Nom Parcelle Mère"])
+    : str(record.fields[parcelleLinkField]);
+
+  const proprietairePrincipal = primaryOwnerId
+    ? str(ownerMap.get(primaryOwnerId)?.["Nom Propriétaire"])
+    : "";
+
+  const primaryPerson = primaryPersonId ? personMap.get(primaryPersonId) : undefined;
+  const contactNom = primaryPerson
+    ? str(primaryPerson["Raison Sociale"]) ||
+      `${str(primaryPerson["Prénom"])} ${str(primaryPerson["Nom"])}`.trim()
+    : "";
+
+  const contactEmails = [
+    ...new Set(
+      primaryPerson
+        ? toStringArray(primaryPerson["e-mail"])
+        : []
+    ),
+  ];
+
+  const contactTelephones = [
+    ...new Set(
+      primaryPerson
+        ? [
+            ...toStringArray(primaryPerson["Téléphone 1"]),
+            ...toStringArray(primaryPerson["Téléphone 2"]),
+          ]
+        : []
+    ),
+  ];
+
+  const contactAdresse = primaryPerson
+    ? [
+        str(primaryPerson["Adresse"]),
+        [str(primaryPerson["CodePostal"]), str(primaryPerson["Ville"])]
+          .filter(Boolean)
+          .join(" "),
+      ]
+        .filter(Boolean)
+        .join(", ")
+    : "";
+
+  const fallbackEmails = toStringArray(record.fields["e-mail"]);
+  const fallbackPhones = [
+    ...toStringArray(record.fields["téléphone"]),
+    ...toStringArray(record.fields["téléphone 2"]),
+  ];
+
   return {
     ...mapCadastre(record),
-    proprietaires: toStringArray(record.fields["🌳 Propriétaires"]),
-    personnes: toStringArray(record.fields["Personnes"]),
+    proprietaires: proprietairePrincipal
+      ? [proprietairePrincipal]
+      : toStringArray(record.fields["🌳 Propriétaires"]).slice(0, 1),
+    parcelleMere,
     notes: str(record.fields["Notes"]),
     villes: toStringArray(record.fields["Ville"]),
-    emails: toStringArray(record.fields["e-mail"]),
-    telephones: [
-      ...toStringArray(record.fields["téléphone"]),
-      ...toStringArray(record.fields["téléphone 2"]),
-    ],
+    emails: contactEmails.length > 0 ? contactEmails : fallbackEmails,
+    telephones: contactTelephones.length > 0 ? contactTelephones : fallbackPhones,
+    contactNoms: contactNom ? [contactNom] : [],
+    contactEmails,
+    contactTelephones,
+    contactAdresse,
   };
 }
 
@@ -368,6 +475,7 @@ export async function listCadastresForHome(): Promise<CadastreSearchItem[]> {
     ]),
     resolveLinkedRecords(TABLES.proprietaires, ownerIds, [
       "Nom Propriétaire",
+      "Mandataire",
       "Personnes",
       "e-mail",
       "téléphone 1",
@@ -378,9 +486,7 @@ export async function listCadastresForHome(): Promise<CadastreSearchItem[]> {
     ]),
   ]);
 
-  const personIds = [...ownerNameMap.values()].flatMap((ownerFields) =>
-    toStringArray(ownerFields["Personnes"])
-  );
+  const personIds = [...ownerNameMap.values()].flatMap((ownerFields) => ownerContactIds(ownerFields));
   const personMap = await resolveLinkedRecords(TABLES.personnes, personIds, [
     "Nom",
     "Prénom",
@@ -403,14 +509,14 @@ export async function listCadastresForHome(): Promise<CadastreSearchItem[]> {
         .map((id) => str(parcelleNameMap.get(id)?.["Nom Parcelle Mère"]))
         .filter((value): value is string => Boolean(value));
       const lieuDit =
-        linkedParcelleNames.join(" · ") ||
+        linkedParcelleNames[0] ||
         firstNonEmpty(record.fields, [parcelleLinkField]);
 
       const linkedOwnerNames = toStringArray(record.fields[ownerLinkField])
         .map((id) => str(ownerNameMap.get(id)?.["Nom Propriétaire"]))
         .filter((value): value is string => Boolean(value));
       const proprietaire =
-        linkedOwnerNames.join(" · ") ||
+        linkedOwnerNames[0] ||
         firstNonEmpty(record.fields, ["🌳 Propriétaires", ownerLinkField]);
 
       const ownerLinkedIds = toStringArray(record.fields[ownerLinkField]);
@@ -430,7 +536,7 @@ export async function listCadastresForHome(): Promise<CadastreSearchItem[]> {
         .join(" ");
 
       const contactLinkedFromOwners = ownerLinkedIds
-        .flatMap((id) => toStringArray(ownerNameMap.get(id)?.["Personnes"]))
+        .flatMap((id) => ownerContactIds(ownerNameMap.get(id)))
         .map((personId) =>
           extractSearchText(personMap.get(personId) ?? {}, [
             "Nom",
