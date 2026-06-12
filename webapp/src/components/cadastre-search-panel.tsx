@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import type { CadastreSearchItem } from "@/lib/airtable";
-import { saveNav } from "@/lib/cadastre-nav";
+import { saveNav, loadNav, CADASTRE_NAV_KEY } from "@/lib/cadastre-nav";
 
 type Props = {
   initialItems: CadastreSearchItem[];
@@ -20,6 +20,14 @@ function normalizeQuery(value: string): string {
 
 export default function CadastreSearchPanel({ initialItems, userEmail }: Props) {
   const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    const ctx = loadNav();
+    if (ctx?.backUrl === "/" && ctx.backQuery !== undefined) {
+      setQuery(ctx.backQuery);
+      sessionStorage.removeItem(CADASTRE_NAV_KEY);
+    }
+  }, []);
 
   const normalizedQuery = normalizeQuery(query);
   const filtered = useMemo(() => {
@@ -66,7 +74,7 @@ export default function CadastreSearchPanel({ initialItems, userEmail }: Props) 
           <li key={item.id}>
             <Link
               href={`/cadastres/${item.id}`}
-              onClick={() => saveNav(filtered.map((i) => i.id), index, "/")}
+              onClick={() => saveNav(filtered.map((i) => i.id), index, "/", query)}
               className="block rounded-2xl border border-slate-300/60 bg-[#f3f4f6] p-4 text-slate-900 shadow-sm transition hover:bg-white active:scale-[0.995]"
             >
               <div className="flex items-start justify-between gap-3">
