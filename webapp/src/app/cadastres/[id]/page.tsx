@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCadastreById } from "@/lib/airtable";
+import CadastreNavBar from "@/components/cadastre-nav-bar";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,8 @@ export default async function CadastrePage({ params }: PageProps) {
         <Link href="/" className="mb-4 inline-block text-sm text-slate-700 underline">
           ← Retour accueil
         </Link>
+
+        <CadastreNavBar currentId={id} />
 
         <section className="rounded-xl bg-white p-5 shadow-sm">
           <h1 className="text-3xl font-semibold">

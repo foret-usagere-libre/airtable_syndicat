@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { searchCadastres } from "@/lib/airtable";
+import CadastreList from "@/components/cadastre-list";
 
 export const dynamic = "force-dynamic";
 
@@ -45,24 +46,7 @@ export default async function RecherchePage({ searchParams }: PageProps) {
         <p className="mb-3 text-sm text-slate-600">{results.length} résultat(s)</p>
       ) : null}
 
-      <ul className="space-y-2">
-        {results.map((cadastre) => (
-          <li key={cadastre.id}>
-            <Link
-              href={`/cadastres/${cadastre.id}`}
-              className="block rounded-lg border border-slate-200 bg-white p-3"
-            >
-              <p className="font-medium">
-                {cadastre.section || "?"} {cadastre.numero || ""}
-                {cadastre.part ? ` - ${cadastre.part}` : ""}
-              </p>
-              <p className="text-sm text-slate-600">
-                {cadastre.surface ? `${cadastre.surface} m²` : "Surface inconnue"}
-              </p>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <CadastreList items={results} />
     </main>
   );
 }

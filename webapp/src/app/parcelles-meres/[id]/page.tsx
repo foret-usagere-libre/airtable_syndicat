@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getParcelleMereById, listCadastresByIds } from "@/lib/airtable";
+import CadastreList from "@/components/cadastre-list";
 
 export const dynamic = "force-dynamic";
 
@@ -34,24 +35,7 @@ export default async function ParcelleMerePage({ params }: PageProps) {
       </p>
 
       <h2 className="mb-2 text-lg font-medium">Sections cadastrales</h2>
-      <ul className="space-y-2">
-        {cadastres.map((cadastre) => (
-          <li key={cadastre.id}>
-            <Link
-              href={`/cadastres/${cadastre.id}`}
-              className="block rounded-lg border border-slate-200 bg-[#efefef] p-3"
-            >
-              <p className="font-medium">
-                {cadastre.section || "?"} {cadastre.numero || ""}
-                {cadastre.part ? ` - ${cadastre.part}` : ""}
-              </p>
-              <p className="text-sm text-slate-600">
-                {cadastre.surface ? `${cadastre.surface} m²` : "Surface inconnue"}
-              </p>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <CadastreList items={cadastres} />
     </main>
   );
 }

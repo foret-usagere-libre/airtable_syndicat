@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { CadastreSearchItem } from "@/lib/airtable";
+import { saveNav } from "@/lib/cadastre-nav";
 
 type Props = {
   initialItems: CadastreSearchItem[];
@@ -61,10 +62,11 @@ export default function CadastreSearchPanel({ initialItems, userEmail }: Props) 
       <p className="mt-4 text-sm text-slate-100/90">{filtered.length} résultat(s)</p>
 
       <ul className="mt-3 space-y-3">
-        {filtered.map((item) => (
+        {filtered.map((item, index) => (
           <li key={item.id}>
             <Link
               href={`/cadastres/${item.id}`}
+              onClick={() => saveNav(filtered.map((i) => i.id), index)}
               className="block rounded-2xl border border-slate-300/60 bg-[#f3f4f6] p-4 text-slate-900 shadow-sm transition hover:bg-white active:scale-[0.995]"
             >
               <div className="flex items-start justify-between gap-3">
