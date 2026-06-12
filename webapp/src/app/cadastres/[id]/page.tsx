@@ -85,14 +85,7 @@ export default async function CadastrePage({ params }: PageProps) {
           </section>
         ) : null}
 
-        {cadastre.villes.length > 0 ? (
-          <section className="mt-4 rounded-xl bg-white p-4 shadow-sm">
-            <h2 className="mb-1 font-medium">Villes</h2>
-            <p className="text-sm text-slate-700">{cadastre.villes.join(", ")}</p>
-          </section>
-        ) : null}
-
-        {cadastre.notes ? (
+{cadastre.notes ? (
           <section className="mt-4 rounded-xl bg-white p-4 shadow-sm">
             <h2 className="mb-1 font-medium">Notes</h2>
             <p className="whitespace-pre-wrap text-sm text-slate-700">{cadastre.notes}</p>
