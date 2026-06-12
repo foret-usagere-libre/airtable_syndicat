@@ -9,6 +9,7 @@ type NavState = {
   ids: string[];
   index: number;
   backUrl: string;
+  backQuery?: string;
 };
 
 export default function CadastreNavBar({ currentId }: { currentId: string }) {
@@ -18,12 +19,12 @@ export default function CadastreNavBar({ currentId }: { currentId: string }) {
   useEffect(() => {
     const ctx = loadNav();
     if (!ctx || !ctx.ids.includes(currentId)) return;
-    setNav({ ids: ctx.ids, index: ctx.ids.indexOf(currentId), backUrl: ctx.backUrl });
+    setNav({ ids: ctx.ids, index: ctx.ids.indexOf(currentId), backUrl: ctx.backUrl, backQuery: ctx.backQuery });
   }, [currentId]);
 
   function go(targetIndex: number) {
     if (!nav) return;
-    saveNav(nav.ids, targetIndex, nav.backUrl);
+    saveNav(nav.ids, targetIndex, nav.backUrl, nav.backQuery);
     router.push(`/cadastres/${nav.ids[targetIndex]}`);
   }
 
