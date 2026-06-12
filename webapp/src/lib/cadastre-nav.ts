@@ -1,13 +1,14 @@
 export type CadastreNavContext = {
   ids: string[];
   index: number;
+  backUrl: string;
 };
 
 export const CADASTRE_NAV_KEY = "cadastreNav";
 
-export function saveNav(ids: string[], index: number): void {
+export function saveNav(ids: string[], index: number, backUrl: string): void {
   try {
-    sessionStorage.setItem(CADASTRE_NAV_KEY, JSON.stringify({ ids, index } satisfies CadastreNavContext));
+    sessionStorage.setItem(CADASTRE_NAV_KEY, JSON.stringify({ ids, index, backUrl } satisfies CadastreNavContext));
   } catch {
     // sessionStorage unavailable
   }

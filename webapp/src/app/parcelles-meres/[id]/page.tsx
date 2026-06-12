@@ -35,7 +35,7 @@ export default async function ParcelleMerePage({ params }: PageProps) {
       </p>
 
       <h2 className="mb-2 text-lg font-medium">Sections cadastrales</h2>
-      <CadastreList items={cadastres} />
+      <CadastreList items={cadastres} backUrl={`/parcelles-meres/${id}`} />
     </main>
   );
 }

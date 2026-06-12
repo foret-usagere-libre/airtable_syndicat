@@ -66,7 +66,7 @@ export default function CadastreSearchPanel({ initialItems, userEmail }: Props) 
           <li key={item.id}>
             <Link
               href={`/cadastres/${item.id}`}
-              onClick={() => saveNav(filtered.map((i) => i.id), index)}
+              onClick={() => saveNav(filtered.map((i) => i.id), index, "/")}
               className="block rounded-2xl border border-slate-300/60 bg-[#f3f4f6] p-4 text-slate-900 shadow-sm transition hover:bg-white active:scale-[0.995]"
             >
               <div className="flex items-start justify-between gap-3">

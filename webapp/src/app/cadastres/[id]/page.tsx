@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { getCadastreById } from "@/lib/airtable";
 import CadastreNavBar from "@/components/cadastre-nav-bar";
 
@@ -29,10 +28,6 @@ export default async function CadastrePage({ params }: PageProps) {
   return (
     <main className="min-h-screen bg-slate-100">
       <div className="mx-auto max-w-4xl px-4 py-6">
-        <Link href="/" className="mb-4 inline-block text-sm text-slate-700 underline">
-          ← Retour accueil
-        </Link>
-
         <CadastreNavBar currentId={id} />
 
         <section className="rounded-xl bg-white p-5 shadow-sm">

@@ -46,7 +46,7 @@ export default async function RecherchePage({ searchParams }: PageProps) {
         <p className="mb-3 text-sm text-slate-600">{results.length} résultat(s)</p>
       ) : null}
 
-      <CadastreList items={results} />
+      <CadastreList items={results} backUrl={`/recherche?q=${encodeURIComponent(query)}`} />
     </main>
   );
 }

@@ -11,7 +11,7 @@ type CadastreItem = {
   surface?: number;
 };
 
-export default function CadastreList({ items }: { items: CadastreItem[] }) {
+export default function CadastreList({ items, backUrl }: { items: CadastreItem[]; backUrl: string }) {
   const ids = items.map((i) => i.id);
 
   return (
@@ -20,7 +20,7 @@ export default function CadastreList({ items }: { items: CadastreItem[] }) {
         <li key={cadastre.id}>
           <Link
             href={`/cadastres/${cadastre.id}`}
-            onClick={() => saveNav(ids, index)}
+            onClick={() => saveNav(ids, index, backUrl)}
             className="block rounded-lg border border-slate-200 bg-[#efefef] p-3"
           >
             <p className="font-medium">
