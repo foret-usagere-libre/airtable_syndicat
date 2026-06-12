@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getCadastreById } from "@/lib/airtable";
 import CadastreNavBar from "@/components/cadastre-nav-bar";
 
@@ -79,7 +80,16 @@ export default async function CadastrePage({ params }: PageProps) {
         {cadastre.parcelleMere ? (
           <section className="mt-4 rounded-xl bg-white p-4 shadow-sm">
             <h2 className="mb-1 font-medium">Parcelle mère</h2>
-            <p className="text-sm text-slate-700">{cadastre.parcelleMere}</p>
+            {cadastre.parcelleMereId ? (
+              <Link
+                href={`/parcelles-meres/${cadastre.parcelleMereId}`}
+                className="text-sm text-slate-700 underline"
+              >
+                {cadastre.parcelleMere}
+              </Link>
+            ) : (
+              <p className="text-sm text-slate-700">{cadastre.parcelleMere}</p>
+            )}
             <p className="mt-1 text-sm text-slate-500">
               Section {cadastre.section || "?"} {cadastre.numero || ""}
               {cadastre.part ? ` – ${cadastre.part}` : ""}

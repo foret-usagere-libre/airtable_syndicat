@@ -35,6 +35,7 @@ export type CadastreSearchItem = CadastreListItem & {
 export type CadastreDetail = CadastreListItem & {
   proprietaires: string[];
   parcelleMere: string;
+  parcelleMereId: string;
   notes: string;
   villes: string[];
   emails: string[];
@@ -425,6 +426,7 @@ export async function getCadastreById(id: string): Promise<CadastreDetail | null
       ? [proprietairePrincipal]
       : toStringArray(record.fields["🌳 Propriétaires"]).slice(0, 1),
     parcelleMere,
+    parcelleMereId: primaryParcelleId ?? "",
     notes: str(record.fields["Notes"]),
     villes: toStringArray(record.fields["Ville"]),
     emails: contactEmails.length > 0 ? contactEmails : fallbackEmails,
