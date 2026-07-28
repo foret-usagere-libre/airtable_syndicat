@@ -17,6 +17,9 @@ export default function CadastreSearchPanel({ initialItems, userEmail }: Props) 
   useEffect(() => {
     const ctx = loadNav();
     if (ctx?.backUrl === "/" && ctx.backQuery !== undefined) {
+      // Hydrate from sessionStorage post-mount on purpose: reading it during
+      // render would desync server/client HTML and break hydration.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setQuery(ctx.backQuery);
       sessionStorage.removeItem(CADASTRE_NAV_KEY);
     }

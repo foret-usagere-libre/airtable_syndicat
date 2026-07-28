@@ -31,11 +31,13 @@ Objectifs principaux :
 
 ### Authentification / controle d'acces
 - Entree via lien magique : `/auth/magic?token=...`
-- Verification token dans la table Airtable `Users`.
-- Creation d'un cookie de session HTTP-only (`fu_session`) valable 5h.
+- Verification token dans la table Airtable `Users` (correspondance exacte sur `MagicLink`).
+- Creation d'un cookie de session HTTP-only (`fu_session`).
 - Middleware global :
   - protege toute l'application,
-  - autorise seulement `/auth/magic` et `/acces` sans session.
+  - autorise seulement `/auth/magic` et `/acces` sans session,
+  - revalide le statut Airtable toutes les 10 minutes et prolonge la session tant que le compte reste actif (pas de coupure a horaire fixe ; coupure si le compte est desactive, sous 10 min max) ; une panne Airtable transitoire ne deconnecte pas l'utilisateur.
+- Statut Airtable reconnu comme actif : toute valeur normalisee (accents/casse ignores) egale a `actif` ou `active` -- couvre notamment `activé`, la valeur reellement utilisee dans la base. `désactivé` (et toute autre valeur) est traite comme inactif.
 
 ## 3) Architecture technique
 
@@ -135,15 +137,18 @@ Les utilisateurs sont gérés directement dans Airtable, table `👷🏻‍♂�
 Champs requis :
 - `Nom` : nom de l'utilisateur
 - `e-mail` : email
-- `MagicLink` : token unique (chaîne arbitraire, ex. UUID)
-- `Status` : statut actif
+- `MagicLink` : **le jeton seul** (ex. `61bafb05bf354c3c929155dc050c5a19`), jamais l'URL complète
+- `Status` : `activé` pour donner accès, `désactivé` pour couper
+
+⚠️ Piège vécu (28/07/2026) : si `MagicLink` contient le lien entier (`https://.../auth/magic?token=...`) au lieu du jeton seul, la vérification échoue et l'utilisateur est bloqué (accès refusé). Toujours coller uniquement la valeur après `token=`.
 
 Pour donner accès à un utilisateur :
 1. Créer un enregistrement dans la table `Users`
-2. Renseigner un token unique dans `MagicLink`
-3. Envoyer le lien : `https://cadastre.foret-usagere.fr/auth/magic?token=<valeur MagicLink>`
+2. Renseigner un token unique **seul** dans `MagicLink` (pas l'URL complète)
+3. Mettre `Status` sur `activé`
+4. Envoyer le lien : `https://cadastre.foret-usagere.fr/auth/magic?token=<valeur MagicLink>`
 
-La session créée est valable 5h. Le lien peut être réutilisé (pas de consommation unique).
+Le lien peut être réutilisé (pas de consommation unique). La session reste active tant que `Status` = actif ; voir §2 pour le detail de la revalidation.
 
 ## 10) Commandes developpement
 

@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+# dependencies (webapp/ has its own; this covers stray root installs)
+node_modules/
+
+# Claude Code local settings (personal, not shared)
+.claude/
+
+# Airtable schema export (working file, not project source)
+structure_base.json

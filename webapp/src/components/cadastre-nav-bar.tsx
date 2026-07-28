@@ -19,6 +19,9 @@ export default function CadastreNavBar({ currentId }: { currentId: string }) {
   useEffect(() => {
     const ctx = loadNav();
     if (!ctx || !ctx.ids.includes(currentId)) return;
+    // Hydrate from sessionStorage post-mount on purpose: reading it during
+    // render would desync server/client HTML and break hydration.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setNav({ ids: ctx.ids, index: ctx.ids.indexOf(currentId), backUrl: ctx.backUrl, backQuery: ctx.backQuery });
   }, [currentId]);
 
