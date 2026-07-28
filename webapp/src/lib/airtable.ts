@@ -1,3 +1,5 @@
+import { normalizeText } from "@/lib/text";
+
 type AirtableRecord = {
   id: string;
   fields: Record<string, unknown>;
@@ -174,24 +176,8 @@ function escapeAirtableFormulaString(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\r?\n/g, " ");
 }
 
-function normalizeStatus(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .trim();
-}
-
 export function isUserActive(status: string): boolean {
-  return normalizeStatus(status) === "active";
-}
-
-function normalizeSearchText(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .trim();
+  return normalizeText(status) === "active";
 }
 
 function firstNonEmpty(fields: Record<string, unknown>, keys: string[]): string {
@@ -587,7 +573,7 @@ export async function listCadastresForHome(): Promise<CadastreSearchItem[]> {
 
       const inlineContactsText = toStringArray(record.fields["Personnes"]).join(" ");
 
-      const searchText = normalizeSearchText(
+      const searchText = normalizeText(
         [
           code,
           lieuDit,
@@ -615,16 +601,12 @@ export async function listCadastresForHome(): Promise<CadastreSearchItem[]> {
     .sort((a, b) => a.code.localeCompare(b.code, "fr", { sensitivity: "base" }));
 }
 
-export function normalizeQuery(value: string): string {
-  return normalizeSearchText(value);
-}
-
 export async function getUserByMagicToken(token: string): Promise<MagicUser | null> {
   const cleanToken = token.trim();
   if (!cleanToken) return null;
 
   const escapedToken = escapeAirtableFormulaString(cleanToken);
-  const formula = `OR({MagicLink}="${escapedToken}", FIND("${escapedToken}", {MagicLink} & "") > 0)`;
+  const formula = `{MagicLink}="${escapedToken}"`;
   const records = await airtableList(TABLES.users, {
     maxRecords: 1,
     filterByFormula: formula,
@@ -639,4 +621,20 @@ export async function getUserByMagicToken(token: string): Promise<MagicUser | nu
     nom: str(record.fields["Nom"]),
     status: str(record.fields["Status"]),
   };
+}
+
+export async function getUserStatusById(userId: string): Promise<string | null> {
+  if (!isValidRecordId(userId)) return null;
+  const { token, baseId } = getConfig();
+
+  const url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(TABLES.users)}/${userId}`;
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`Airtable error (${response.status})`);
+
+  const payload = (await response.json()) as AirtableRecord;
+  return str(payload.fields["Status"]);
 }

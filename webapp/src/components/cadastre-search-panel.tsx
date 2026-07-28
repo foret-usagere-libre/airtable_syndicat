@@ -3,20 +3,13 @@
 import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
 import type { CadastreSearchItem } from "@/lib/airtable";
+import { normalizeText } from "@/lib/text";
 import { saveNav, loadNav, CADASTRE_NAV_KEY } from "@/lib/cadastre-nav";
 
 type Props = {
   initialItems: CadastreSearchItem[];
   userEmail?: string;
 };
-
-function normalizeQuery(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .trim();
-}
 
 export default function CadastreSearchPanel({ initialItems, userEmail }: Props) {
   const [query, setQuery] = useState("");
@@ -29,7 +22,7 @@ export default function CadastreSearchPanel({ initialItems, userEmail }: Props) 
     }
   }, []);
 
-  const normalizedQuery = normalizeQuery(query);
+  const normalizedQuery = normalizeText(query);
   const filtered = useMemo(() => {
     if (!normalizedQuery) return initialItems;
     return initialItems.filter((item) => item.searchText.includes(normalizedQuery));

@@ -1,12 +1,14 @@
 const SESSION_TTL_SECONDS = 5 * 60 * 60;
+const REVALIDATE_INTERVAL_SECONDS = 10 * 60;
 const SESSION_COOKIE_NAME = "fu_session";
 
-type SessionPayload = {
+export type SessionPayload = {
   userId: string;
   email: string;
   nom: string;
   iat: number;
   exp: number;
+  checkedAt: number;
 };
 
 function base64UrlEncode(input: Uint8Array): string {
@@ -68,6 +70,7 @@ export async function createSessionToken(user: {
     nom: user.nom,
     iat: now,
     exp: now + ttlSeconds,
+    checkedAt: now,
   };
   const encodedPayload = base64UrlEncode(new TextEncoder().encode(JSON.stringify(payload)));
   const signature = await sign(encodedPayload, secret);
@@ -75,6 +78,12 @@ export async function createSessionToken(user: {
     token: `${encodedPayload}.${signature}`,
     expiresAt: new Date(payload.exp * 1000),
   };
+}
+
+export function needsRevalidation(session: SessionPayload): boolean {
+  const now = Math.floor(Date.now() / 1000);
+  const checkedAt = typeof session.checkedAt === "number" ? session.checkedAt : 0;
+  return now - checkedAt > REVALIDATE_INTERVAL_SECONDS;
 }
 
 export async function verifySessionToken(token: string): Promise<SessionPayload | null> {
