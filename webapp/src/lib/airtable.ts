@@ -177,7 +177,8 @@ function escapeAirtableFormulaString(value: string): string {
 }
 
 export function isUserActive(status: string): boolean {
-  return normalizeText(status) === "active";
+  const normalized = normalizeText(status);
+  return normalized === "actif" || normalized === "active";
 }
 
 function firstNonEmpty(fields: Record<string, unknown>, keys: string[]): string {
